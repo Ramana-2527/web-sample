@@ -50,9 +50,9 @@ const totalSpan = document.getElementById("total");
 function displayMovies() {
   moviesDiv.innerHTML = "";
   moviesByGenre.forEach(section => {
-    const genreDiv = document.createElement("div");
-    genreDiv.innerHTML = `<h3>${section.genre}</h3><div class="movie-row"></div>`;
-    const row = genreDiv.querySelector(".movie-row");
+    const div = document.createElement("div");
+    div.innerHTML = `<h3>${section.genre}</h3><div class="movie-row"></div>`;
+    const row = div.querySelector(".movie-row");
 
     section.movies.forEach(m => {
       row.innerHTML += `
@@ -65,7 +65,7 @@ function displayMovies() {
         </div>`;
     });
 
-    moviesDiv.appendChild(genreDiv);
+    moviesDiv.appendChild(div);
   });
 }
 
@@ -73,8 +73,10 @@ function addToCart(id, type) {
   moviesByGenre.forEach(g => {
     const movie = g.movies.find(m => m.id === id);
     if (movie) {
-      const price = type === "rent" ? movie.rent : movie.buy;
-      cart.push({ title: `${movie.title} (${type})`, price });
+      cart.push({
+        title: `${movie.title} (${type})`,
+        price: type === "rent" ? movie.rent : movie.buy
+      });
     }
   });
   updateCart();
@@ -95,67 +97,85 @@ function updateCart() {
   totalSpan.innerText = total;
 }
 
-function resetAll() {
-  cart = [];
-  updateCart();
-  [
-    "name",
-    "phone",
-    "email",
-    "feedbackName",
-    "feedbackPhone",
-    "feedbackEmail",
-    "feedbackMessage"
-  ].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
-  });
-}
-
-document.getElementById("confirmOrderBtn").onclick = () => {
+/* ===== CUSTOMER DETAILS DOWNLOAD ===== */
+function downloadCustomerDetails() {
   if (cart.length === 0) {
     alert("Cart is empty");
     return;
   }
-  alert("Order placed successfully!");
-  resetAll();
-};
 
-/* ✅ PURE HTML + CSS + JS FEEDBACK DOWNLOAD */
-function downloadFeedback() {
-  const name = document.getElementById("feedbackName").value.trim();
-  const phone = document.getElementById("feedbackPhone").value.trim();
-  const email = document.getElementById("feedbackEmail").value.trim();
-  const message = document.getElementById("feedbackMessage").value.trim();
+  const name = custName.value.trim();
+  const phone = custPhone.value.trim();
+  const email = custEmail.value.trim();
 
-  if (!name || !phone || !email || !message) {
-    alert("Please fill all fields");
-    return;
-  }
+  const nameRegex = /^[A-Za-z ]{3,}$/;
+  const phoneRegex = /^[6-9]\d{9}$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!nameRegex.test(name)) return alert("Invalid name");
+  if (!phoneRegex.test(phone)) return alert("Invalid phone");
+  if (!emailRegex.test(email)) return alert("Invalid email");
+
+  let list = "";
+  let total = 0;
+  cart.forEach(i => {
+    list += `- ${i.title} : ₹${i.price}\n`;
+    total += i.price;
+  });
 
   const text = `
--------------------------
+CUSTOMER DETAILS
+Name  : ${name}
+Phone : ${phone}
+Email : ${email}
+
+MOVIES:
+${list}
+
+TOTAL: ₹${total}
+Date: ${new Date().toLocaleString()}
+`;
+
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "customer_order.txt";
+  a.click();
+
+  cart = [];
+  updateCart();
+  custName.value = custPhone.value = custEmail.value = "";
+}
+
+/* ===== FEEDBACK DOWNLOAD ===== */
+function downloadFeedback() {
+  const name = feedbackName.value.trim();
+  const phone = feedbackPhone.value.trim();
+  const email = feedbackEmail.value.trim();
+  const message = feedbackMessage.value.trim();
+
+  if (!/^[A-Za-z ]{3,}$/.test(name)) return alert("Invalid name");
+  if (!/^[6-9]\d{9}$/.test(phone)) return alert("Invalid phone");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert("Invalid email");
+  if (message.length < 10) return alert("Message too short");
+
+  const text = `
+FEEDBACK
 Name   : ${name}
 Phone  : ${phone}
 Email  : ${email}
 Message: ${message}
 Date   : ${new Date().toLocaleString()}
--------------------------
 `;
 
   const blob = new Blob([text], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = "feedback.txt";
-  document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
 
-  URL.revokeObjectURL(url);
-  resetAll();
-  alert("Feedback downloaded as feedback.txt");
+  feedbackName.value = feedbackPhone.value =
+  feedbackEmail.value = feedbackMessage.value = "";
 }
 
 displayMovies();
